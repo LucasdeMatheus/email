@@ -1,8 +1,9 @@
-package com.example.sendEmails.Email;
+package com.myproject.sendEmails.email;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Date;
 
 @RestController
@@ -16,13 +17,13 @@ public class EmailController {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<String> sendEmail(@RequestBody EmailDTO request) {
+    public ResponseEntity<String> sendEmail(@RequestBody EmailDTO request) throws IOException {
         // usa o service para enviar e-mail
         return emailSender.sendTextEmail(
                 request.to(),
-                request.title(),
-                request.body(),
-                request.date() == null ? new Date() : request.date()
+                request.type(),
+                request.date() == null ? new Date() : request.date(),
+                request.data()
         );
     }
 }

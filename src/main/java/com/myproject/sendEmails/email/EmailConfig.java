@@ -1,7 +1,6 @@
-package com.example.sendEmails.Email;
+package com.myproject.sendEmails.email;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import java.util.Properties;
 

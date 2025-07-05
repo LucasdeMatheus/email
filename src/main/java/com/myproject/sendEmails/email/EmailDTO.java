@@ -1,12 +1,13 @@
-package com.example.sendEmails.Email;
+package com.myproject.sendEmails.email;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public record EmailDTO(
         List<String> to,
-        String title,
-        String body,
+        Map<String, String> data,
+        Type type,
         Date date
 ) {
 }
