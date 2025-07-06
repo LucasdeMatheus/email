@@ -1,4 +1,5 @@
-package com.example.sendEmails;
+package com.myproject.sendEmails;
+
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
