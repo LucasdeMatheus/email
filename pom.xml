@@ -10,8 +10,7 @@
 	</parent>
 	<groupId>com.myproject</groupId>
 	<artifactId>sendEmails</artifactId>
-	<version>0.0.1-SNAPSHgit reset --hard 8695c25
-		OT</version>
+	<version>0.0.1-SNAPSH</version>
 	<name>sendEmails</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
