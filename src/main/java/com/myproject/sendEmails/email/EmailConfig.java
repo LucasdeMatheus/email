@@ -29,9 +29,8 @@ public class EmailConfig {
     public boolean isStarttls() { return starttls; }
     public boolean isDebug() { return debug; }
 
-    // SETTERS (importante para o bind funcionar)
+    // SETTERS
     public void setUsername(String username) { this.username = username; }
-
     public void setPassword(String password) { this.password = password; }
     public void setHost(String host) { this.host = host; }
     public void setPort(int port) { this.port = port; }
@@ -45,6 +44,12 @@ public class EmailConfig {
         props.put("mail.smtp.port", String.valueOf(port));
         props.put("mail.smtp.auth", String.valueOf(auth));
         props.put("mail.smtp.starttls.enable", String.valueOf(starttls));
+        
+        // Propriedades essenciais para autenticação no Gmail
+        props.put("mail.smtp.user", username != null ? username : "");
+        props.put("mail.smtp.ssl.trust", host);
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+        
         return props;
     }
 }
