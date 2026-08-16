@@ -4,13 +4,12 @@ import jakarta.mail.*;
 import jakarta.mail.internet.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -24,116 +23,84 @@ public class EmailSender {
         this.config = config;
     }
 
-
     public ResponseEntity<String> sendTextEmail(List<String> to, Type type, Date date, Map<String, String> data) throws IOException {
         System.out.println("Iniciando envio de email para: " + to);
         System.out.println("Tipo de email: " + type);
 
-        // define as configurações
-        Session session = Session.getInstance(config.toProperties(), new Authenticator() {
-            protected PasswordAuthentication getPasswordAuthentication() {
-                System.out.println("Autenticando email: " + config.getUsername());
-                return new PasswordAuthentication(config.getUsername(), config.getPassword());
-            }
-        });
+        // Mapeia o nome do arquivo com base no Enum
+        String filename = switch (type) {
+            case WELLCOME -> "welcome.compiled.html";
+            case VALIDEMAIL -> "confirm-email.compiled.html";
+            case UPPASSWORD -> "up-password.compiled.html";
+            case SUCESSCHANGEPASSWORD -> "sucesschange-password.compiled.html";
+            case UPEMAIL -> "up-email.compiled.html";
+            case SUCESSCHANGEEMAIL -> "sucesschange-email.compiled.html";
+            case DELETEUSER -> "delete-user.compiled.html";
+            case DELETESUCESSUSER -> "deletesucess-user.compiled.html";
+        };
 
-        String title = "";
         String body = "";
-        File input = null;
-        String fileUrl = "C:/Users/ffgus/desafio-auth-java/user-api/libs/email-library/src/main/resources/emails/";
         try {
-            switch (type){
-                case WELLCOME ->{
-                    input = new File(fileUrl + "confirm-email.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "welcome.compiled.html"));
-                }
-                case VALIDEMAIL -> {
-                    input = new File(fileUrl + "confirm-email.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "confirm-email.compiled.html"));
-                }
-                case UPPASSWORD -> {
-                    input = new File(fileUrl + "up-password.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "up-password.compiled.html"));
-                }
-                case SUCESSCHANGEPASSWORD -> {
-                    input = new File(fileUrl + "sucesschange-password.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "sucesschange-password.compiled.html"));
-                }
-                case UPEMAIL -> {
-                    input = new File(fileUrl + "up-email.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "up-email.compiled.html"));
-                }
-                case SUCESSCHANGEEMAIL -> {
-                    input = new File(fileUrl + "sucesschange-email.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "sucesschange-email.compiled.html"));
-                }
-                case DELETEUSER -> {
-                    input = new File(fileUrl + "delete-user.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "delete-user.compiled.html"));
-                }
-                case DELETESUCESSUSER -> {
-                    input = new File(fileUrl + "deletesucess-user.compiled.html");
-                    body = Files.readString(Paths.get(fileUrl + "deletesucess-user.compiled.html"));
-                }
-            }
-
-            System.out.println("Arquivo de template carregado: " + input.getAbsolutePath());
+            // Carrega o arquivo dinamicamente a partir do Classpath (src/main/resources/emails/)
+            ClassPathResource resource = new ClassPathResource("emails/" + filename);
+            body = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            System.out.println("Template " + filename + " carregado com sucesso do classpath.");
         } catch (IOException e) {
-            System.out.println("Erro ao ler arquivo de template: " + e.getMessage());
+            System.out.println("Erro ao ler arquivo de template no classpath: " + e.getMessage());
             throw e;
         }
 
-        for (Map.Entry<String, String> entry : data.entrySet()) {
-            System.out.println("Substituindo placeholder: {{" + entry.getKey() + "}} por " + entry.getValue());
-            body = body.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        // Substitui as variáveis (placeholders) no HTML
+        if (data != null) {
+            for (Map.Entry<String, String> entry : data.entrySet()) {
+                System.out.println("Substituindo placeholder: {{" + entry.getKey() + "}} por " + entry.getValue());
+                body = body.replace("{{" + entry.getKey() + "}}", entry.getValue());
+            }
         }
 
-        // Parseia o HTML
-        Document doc = Jsoup.parse(input, "UTF-8");
-        title = doc.title();
+        // Extrai o título diretamente da string do HTML com JSoup
+        Document doc = Jsoup.parse(body);
+        String title = doc.title();
         System.out.println("Título do email: " + title);
 
+        // Configuração e envio da sessão Jakarta Mail
+        Session session = Session.getInstance(config.toProperties(), new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(config.getUsername(), config.getPassword());
+            }
+        });
         session.setDebug(config.isDebug());
 
         try {
-            // criação da mensagem
             MimeMessage message = new MimeMessage(session);
-            System.out.println("From email: " + config.getUsername());
-            System.out.println("To email: " + to);
+            message.setFrom(new InternetAddress(config.getUsername()));
 
-            message.setFrom(new InternetAddress(config.getUsername())); // email do remetente
-            System.out.println("Remetente setado: " + config.getUsername());
-
-            // adicionando destinatários
             InternetAddress[] recipients = to.stream()
                     .map(email -> {
                         try {
                             InternetAddress address = new InternetAddress(email.trim());
-                            address.validate();  // Valida o formato do email
-                            System.out.println("Destinatário válido: " + email);
+                            address.validate();
                             return address;
                         } catch (Exception e) {
-                            System.out.println("Email inválido: " + email);
                             throw new RuntimeException("Email inválido: " + email, e);
                         }
                     })
                     .toArray(InternetAddress[]::new);
 
-            message.setRecipients(Message.RecipientType.TO, recipients); // "para: destinatarios..."
-            message.setSubject(title, "UTF-8"); // título
-            message.setText(body, "UTF-8"); // mensagem em texto (mas depois substituído pelo html)
-            message.setSentDate(date); // data de envio
+            message.setRecipients(Message.RecipientType.TO, recipients);
+            message.setSubject(title, "UTF-8");
+            message.setSentDate(date != null ? date : new Date());
             message.setContent(body, "text/html; charset=UTF-8");
 
-            System.out.println("Mensagem pronta para envio, enviando...");
-            Transport.send(message); // envia
+            System.out.println("Enviando e-mail...");
+            Transport.send(message);
             System.out.println("Email enviado com sucesso!");
+
             return ResponseEntity.ok("✅ E-mail enviado com sucesso!");
         } catch (MessagingException e) {
             e.printStackTrace();
-            System.out.println("Erro ao enviar e-mail: " + e.getMessage());
             return ResponseEntity.status(500).body("❌ Erro ao enviar e-mail: " + e.getMessage());
         }
     }
-
 }
